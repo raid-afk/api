@@ -1,8 +1,19 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from textblob import TextBlob
 import random
 import time
-from pydantic import BaseModel
+import requests # We use this to talk to Discord
+
+# --- CONFIGURATION ---
+DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1454992677685690580/VK-tX9Q5DYm0k3wYuHXs0cqGYjt0udD8qslXveprmvoQuHPhikOVM-yZ3UUg8aMe_4PK"
+
+# --- THE NOTIFICATION SYSTEM ---
+def send_alert(msg):
+    try:
+        data = {"content": f"💸 **SYSTEM ALERT:** {msg}"}
+        requests.post(DISCORD_WEBHOOK, json=data)
+    except:
+        pass # If discord fails, don't stop the money engine
 
 # --- THE BUSINESS LOGIC ---
 class SentimentEngine:
@@ -28,8 +39,6 @@ class SentimentEngine:
         for asset in loop_targets:
             news = self.get_social_signals(asset)
             score = self.analyze(news)
-            
-            # The "Money" Algorithm
             signal = "HOLD"
             if score > 0.2: signal = "BUY"
             if score < -0.2: signal = "SELL"
@@ -43,20 +52,22 @@ class SentimentEngine:
             })
         return results
 
-# --- THE WEB SERVER (What allows you to get paid) ---
+# --- THE WEB SERVER ---
 app = FastAPI()
 engine = SentimentEngine()
 
 @app.get("/")
 def home():
-    return {"status": "Online", "message": "High-Frequency Sentiment API is running."}
+    return {"status": "Online"}
 
 @app.get("/predict")
 def predict_all():
-    # This is the endpoint you charge $500/mo for
+    # Trigger the alert
+    send_alert("API Accessed! Full Market Scan requested.") 
     return {"data": engine.run()}
 
 @app.get("/predict/{ticker}")
 def predict_specific(ticker: str):
-    # Specialized endpoint
+    # Trigger the alert
+    send_alert(f"API Accessed! Ticker requested: {ticker.upper()}")
     return {"data": engine.run(ticker.upper())}
